@@ -1,0 +1,159 @@
+--player
+SELECT MIN(reg_date) AS min_reg_date,
+       MAX(reg_date) AS max_reg_date
+FROM players
+--sessions
+SELECT MIN(start_time) AS start_time,
+       MAX(end_time) AS end_time
+FROM sessions
+--deposit
+SELECT MIN([timestamp]) AS min_dep_ts,
+       MAX([timestamp]) AS max_dep_ts
+FROM deposits;
+--bets
+SELECT MIN([timestamp]) AS min_bet_ts,
+       MAX([timestamp]) AS max_bet_ts
+FROM bets;
+--event
+SELECT MIN([timestamp]) AS min_evn_date,
+       MAX([timestamp]) AS max_evn_date
+FROM events
+
+-- Country distribution
+
+SELECT 
+    'Country Distribution' AS metric,
+    country AS category,
+    COUNT(*) AS players
+FROM players
+GROUP BY country
+ORDER BY players DESC;
+
+-- Device distribution
+SELECT 
+    'Device Distribution' AS metric,
+    device AS category,
+    COUNT(*) AS players
+FROM players
+GROUP BY device
+ORDER BY players DESC;
+
+-- channel distribution
+SELECT 
+    'Channel Distribution' AS metric,
+    channel AS category,
+    COUNT(*) AS players
+FROM players
+GROUP BY channel
+ORDER BY players DESC;
+
+-- affiliate distribution
+SELECT 
+    'Affiliate Distribution' AS metric,
+    affiliate_id AS category,
+    COUNT(*) AS players
+FROM players
+GROUP BY affiliate_id
+ORDER BY players DESC;
+
+-- status distribution
+SELECT
+    'KYC Status Distribution' AS metric,
+    kyc_status AS category,
+    COUNT(*) AS players
+FROM players
+GROUP BY kyc_status
+ORDER BY players DESC;
+
+-- birthday distribution
+SELECT
+    'Birth Year Distribution' AS metric,
+    birth_year AS category,
+    COUNT(*) AS players
+FROM players
+WHERE birth_year IS NOT NULL
+GROUP BY birth_year
+ORDER BY birth_year;
+
+--money overw
+SELECT 
+    SUM(amount) AS total_deposit,
+    AVG(amount) AS avg_deposit,
+    COUNT(*) AS deposit_count
+FROM deposits;
+
+SELECT 
+    SUM(amount) AS total_withdrawal,
+    AVG(amount) AS avg_withdrawal,
+    COUNT(*) AS withdrawal_count
+FROM withdrawals;
+
+--financial KPIs
+SELECT 
+    SUM(stake)  AS total_stake,
+    SUM(win) AS total_win,
+    SUM(stake) - SUM(win)  AS ggr,            
+    AVG(stake)  AS avg_stake,
+    AVG(win)   AS avg_win
+FROM bets;
+--Player Deposit 
+SELECT
+    player_id,
+    COUNT(*)          AS deposit_count,
+    SUM(amount)       AS total_deposit,
+    AVG(amount)       AS avg_deposit
+FROM deposits
+GROUP BY player_id
+ORDER BY total_deposit DESC;
+
+-- Profit Per Player
+SELECT 
+player_id,
+SUM(stake) AS total_stake,
+SUM(win) as total_win,
+SUM(stake) - SUM(win) as net_loss,
+CASE
+WHEN SUM(stake) - SUM(win)>500 THEN 'High Roller'
+ELSE 'Regular'
+END player_classification
+FROM bets
+group by player_id
+HAVING SUM(stake)>0
+ORDER BY net_loss asc
+
+--Deposit-to-withdrawal Ratio
+WITH dep AS (
+    SELECT 
+        player_id, 
+        SUM(amount) AS total_deposit
+    FROM deposits
+    GROUP BY player_id
+),
+wd AS (
+    SELECT 
+        player_id, 
+        SUM(amount) AS total_withdrawal
+    FROM withdrawals
+    GROUP BY player_id
+)
+SELECT
+    COALESCE(wd.player_id, dep.player_id) AS player_id,
+    COALESCE(dep.total_deposit, 0)        AS total_deposit,
+    COALESCE(wd.total_withdrawal, 0)      AS total_withdrawal,
+    COALESCE(wd.total_withdrawal, 0) - COALESCE(dep.total_deposit, 0)    AS net_player_profit
+FROM dep
+FULL JOIN wd
+    ON dep.player_id = wd.player_id
+WHERE COALESCE(wd.total_withdrawal, 0) > COALESCE(dep.total_deposit, 0)
+ORDER BY net_player_profit DESC;
+
+-- Overall casino profitability
+SELECT 
+    SUM(stake) - SUM(win) AS total_ggr,                   
+    SUM(stake)           AS total_stake,                  
+    SUM(win)             AS total_payout,                 
+    CASE 
+        WHEN SUM(stake) = 0 THEN NULL
+        ELSE (SUM(stake) - SUM(win)) * 100.0 / SUM(stake)
+    END AS profit_margin_percent                           
+FROM bets;
