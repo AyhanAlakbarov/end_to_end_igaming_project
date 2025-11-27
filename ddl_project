@@ -1,0 +1,70 @@
+CREATE TABLE dbo.players(
+player_id INT NOT NULL PRIMARY KEY,
+reg_date DATE NOT NULL,
+country  CHAR(2) NOT NULL,
+device   VARCHAR(20)    NOT NULL,  
+affiliate_id   INT            NOT NULL,
+channel  VARCHAR(30)    NOT NULL,   
+kyc_status  VARCHAR(20)    NOT NULL, 
+birth_year  INT            NULL
+)
+CREATE TABLE dbo.games (
+    game_id         INT           NOT NULL PRIMARY KEY,
+    game_name       VARCHAR(100)  NOT NULL,
+    provider        VARCHAR(50)   NOT NULL,
+    category        VARCHAR(30)   NOT NULL,   
+    theoretical_rtp DECIMAL(5,2)  NOT NULL    
+);
+CREATE TABLE dbo.sessions (
+    session_id  INT           NOT NULL PRIMARY KEY,
+    player_id   INT           NOT NULL,
+    start_time  DATETIME2(0)  NOT NULL,
+    end_time    DATETIME2(0)  NOT NULL,
+    device      VARCHAR(20)   NOT NULL,
+    ip_address  VARCHAR(45)   NOT NULL,
+
+    CONSTRAINT FK_sessions_player
+        FOREIGN KEY (player_id) REFERENCES dbo.players(player_id)
+);
+CREATE TABLE dbo.deposits (
+    deposit_id  INT            NOT NULL PRIMARY KEY,
+    player_id   INT            NOT NULL,
+    amount      DECIMAL(10,2)  NOT NULL,
+    method      VARCHAR(30)    NOT NULL,    
+    [timestamp] DATETIME2(0)   NOT NULL,
+
+    CONSTRAINT FK_deposits_player
+        FOREIGN KEY (player_id) REFERENCES dbo.players(player_id)
+);
+CREATE TABLE dbo.withdrawals (
+    withdrawal_id INT            NOT NULL PRIMARY KEY,
+    player_id     INT            NOT NULL,
+    amount        DECIMAL(10,2)  NOT NULL,
+    status        VARCHAR(20)    NOT NULL,  
+    [timestamp]   DATETIME2(0)   NOT NULL,
+
+    CONSTRAINT FK_withdrawals_player
+        FOREIGN KEY (player_id) REFERENCES dbo.players(player_id)
+);
+CREATE TABLE dbo.bets (
+    bet_id    INT            NOT NULL PRIMARY KEY,
+    player_id INT            NOT NULL,
+    game_id   INT            NOT NULL,
+    stake     DECIMAL(10,2)  NOT NULL,
+    win       DECIMAL(10,2)  NOT NULL,
+    [timestamp] DATETIME2(0) NOT NULL,
+
+    CONSTRAINT FK_bets_player
+        FOREIGN KEY (player_id) REFERENCES dbo.players(player_id),
+    CONSTRAINT FK_bets_game
+        FOREIGN KEY (game_id)   REFERENCES dbo.games(game_id)
+);
+CREATE TABLE dbo.events (
+    event_id   INT           NOT NULL PRIMARY KEY,
+    player_id  INT           NOT NULL,
+    event_type VARCHAR(50)   NOT NULL,     
+    [timestamp] DATETIME2(0) NOT NULL,
+
+    CONSTRAINT FK_events_player
+        FOREIGN KEY (player_id) REFERENCES dbo.players(player_id)
+);
