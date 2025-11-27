@@ -1,0 +1,113 @@
+--DAU
+SELECT CAST([timestamp] AS DATE) AS activity_date,
+COUNT(DISTINCT player_id) as players,
+COUNT(*) as total_bets,
+SUM(stake) as total_stake, 
+SUM(win) as total_win
+FROM bets
+GROUP BY CAST([timestamp] AS DATE)
+ORDER BY activity_date 
+
+--DAU per day
+SELECT 
+    CAST([timestamp] AS DATE) AS activity_date,
+    COUNT(DISTINCT player_id) AS dau
+FROM bets
+GROUP BY CAST([timestamp] AS DATE)
+ORDER BY activity_date;
+
+--highest DAU
+WITH daily as (
+    SELECT 
+        CAST([timestamp] AS DATE) AS activity_date,
+        COUNT(DISTINCT player_id) AS dau
+    FROM bets
+    GROUP BY CAST([timestamp] AS DATE)
+   )
+   SELECT TOP 1 *
+   FROM daily
+   ORDER BY dau DESC
+
+
+--WAU
+SELECT 
+DATEPART(YEAR, [timestamp]) as activity_year,
+DATEPART(WEEK, [timestamp]) as activity_week,
+COUNT(DISTINCT player_id) as active_players
+FROM bets
+GROUP BY DATEPART(YEAR, [timestamp]), DATEPART(WEEK, [timestamp]) 
+ORDER BY 
+activity_year,activity_week
+
+--WAU total
+-- WAU + weekly totals
+SELECT
+    DATEPART(YEAR, [timestamp]) AS activity_year,
+    DATEPART(WEEK, [timestamp]) AS activity_week,
+    COUNT(DISTINCT player_id)   AS wau,
+    COUNT(*)                    AS bet_count,
+    SUM(stake)                  AS total_stake,
+    SUM(win)                    AS total_win
+FROM bets
+GROUP BY
+    DATEPART(YEAR, [timestamp]),
+    DATEPART(WEEK, [timestamp])
+ORDER BY
+    activity_year,
+    activity_week;
+
+--MAU
+SELECT
+    DATEPART(YEAR, [timestamp])  AS activity_year,
+    DATEPART(MONTH, [timestamp]) AS activity_month,
+    COUNT(DISTINCT player_id)    AS mau
+FROM bets
+GROUP BY
+    DATEPART(YEAR, [timestamp]),
+    DATEPART(MONTH, [timestamp])
+ORDER BY
+    activity_year,
+    activity_month;
+
+--MAU total
+SELECT
+    DATEPART(YEAR, [timestamp])  AS activity_year,
+    DATEPART(MONTH, [timestamp]) AS activity_month,
+    COUNT(DISTINCT player_id)    AS mau,
+    COUNT(*)                     AS bet_count,
+    SUM(stake)                   AS total_stake,
+    SUM(win)                     AS total_win
+FROM bets
+GROUP BY
+    DATEPART(YEAR, [timestamp]),
+    DATEPART(MONTH, [timestamp])
+ORDER BY
+    activity_year,
+    activity_month;
+
+--stickiness: DAU / MAU
+WITH daily AS (
+    SELECT 
+        CAST([timestamp] AS DATE) AS activity_date,
+        COUNT(DISTINCT player_id) AS dau
+    FROM bets
+    GROUP BY CAST([timestamp] AS DATE)
+),
+monthly AS (
+    SELECT 
+        DATEFROMPARTS(YEAR([timestamp]), MONTH([timestamp]), 1) AS activity_month,
+        COUNT(DISTINCT player_id) AS mau
+    FROM bets
+    GROUP BY DATEFROMPARTS(YEAR([timestamp]), MONTH([timestamp]), 1)
+)
+SELECT
+    d.activity_date,
+    d.dau,
+    m.activity_month,
+    m.mau,
+    ROUND(d.dau * 1.0 / m.mau, 3) AS stickiness_ratio
+FROM daily d
+JOIN monthly m
+  ON YEAR(d.activity_date)  = YEAR(m.activity_month)
+ AND MONTH(d.activity_date) = MONTH(m.activity_month)
+ORDER BY d.activity_date;
